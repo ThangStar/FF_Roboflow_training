@@ -5,6 +5,5 @@ ff_train_v2/valid
 ff_train_v2/yolo-env
 ff_train/README.dataset.txt
 /yolo-env
-/ff_train_v2
 
 yolo-env/Lib/site-packages/tzdata/zoneinfo/CST6CDT
