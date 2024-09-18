@@ -1,12 +1,11 @@
 import pyautogui
 from PIL import ImageGrab
-import time
 import tkinter as tk
 import numpy as np
 from ultralytics import YOLO
 
 # Initialize YOLO model globally
-model = YOLO('E:\ws\FFTool\runs\detect\train4\weights\best.pt')  # or your specific model path
+model = YOLO('E:/ws/FFTool/runs/detect/train5/weights/best.pt')  # or your specific model path
 
 # template_files = ['p1.jpg','p2.jpg', 'p3.jpg']  # Add all your template file names here
 # templates = []
@@ -90,8 +89,8 @@ def detect_object():
     # Capture only the middle 300x300 area of the screen
     screenshot = np.array(ImageGrab.grab(bbox=(x1, y1, x2, y2)))
     
-    # Perform detection
-    results = model(screenshot)
+    # Perform detection with a higher confidence threshold and NMS
+    results = model(screenshot, conf=0.5, iou=0.6)  # Adjust these values as needed
     
     detections = []
     
@@ -99,18 +98,14 @@ def detect_object():
     for result in results:
         boxes = result.boxes.cpu().numpy()
         for box in boxes:
-            x, y, w, h = box.xywh[0]
+            x1, y1, x2, y2 = box.xyxy[0]
             confidence = box.conf[0]
             class_id = box.cls[0]
             
-            # Calculate center of the detected object
-            center_x = int(x1 + x)
-            center_y = int(y1 + y)
-            
-            # Get class name
+            # Lấy tên lớp
             class_name = model.names[int(class_id)]
             
-            detections.append((center_x, center_y, class_name, confidence))
+            detections.append((int(x1), int(y1), int(x2), int(y2), class_name, confidence))
 
     return detections if detections else None
 
@@ -121,19 +116,25 @@ if __name__ == "__main__":
             result = detect_object()
             
             if result:
+                # Xóa các phát hiện trước đó
+                canvas.delete("detection")
                 for detection in result:
-                    x, y, class_name, confidence = detection
-                    # Calculate relative position within the 300x300 area
-                    rel_x = x - ((root.winfo_screenwidth() - 300) // 2) 
-                    rel_y = y - ((root.winfo_screenheight() - 300) // 2) 
-                    # Clear previous detections
-                    canvas.delete("detection")
-                    # Draw a red dot at the detected position
-                    canvas.create_oval(rel_x-5, rel_y-5, rel_x+5, rel_y+5, fill="red", outline="red", tags="detection")
-                    print(f"Object detected at: ({x}, {y}), Class: {class_name}, Confidence: {confidence:.2f}")
+                    x1, y1, x2, y2, class_name, confidence = detection
+                    # Vẽ hình chữ nhật bao quanh đối tượng
+                    canvas.create_rectangle(x1, y1, x2, y2, 
+                                            outline="red", width=2, tags="detection")
+                    
+                    # Hiển thị tên lớp và độ tin cậy
+                    canvas.create_text((x1 + x2) / 2, y1 - 10,
+                                       text=f"{class_name}: {confidence:.2f}",
+                                       fill="red", font=("Arial", 8), tags="detection")
+                    
+                    print(f"Object detected at: ({x1}, {y1}, {x2}, {y2}), Class: {class_name}, Confidence: {confidence:.2f}")
             
             root.update()
     except KeyboardInterrupt:
         print("\nExiting...")
     finally:
-        if 
+        if root:
+            root.destroy()
+
